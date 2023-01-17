@@ -93,6 +93,7 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -166,7 +167,6 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Nonnull;
-import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7655,6 +7655,33 @@ public class ResourceProviderR4Test extends BaseResourceProviderR4Test {
 			.execute();
 
 		assertEquals(0, results.getEntry().size());
+	}
+
+	@Test
+	public void testConceptMapInTransactionBundle() {
+		ConceptMap conceptMap = new ConceptMap();
+		conceptMap.setUrl("https://tempuri.org/esl");
+		conceptMap.setStatus(Enumerations.PublicationStatus.ACTIVE);
+
+		ConceptMap.ConceptMapGroupComponent group  = conceptMap.addGroup();
+		group.setSource("https://www.ciussscentreouest.ca/codeSystem/contactRole");
+		group.setTarget("https://terminology.hl7.org/3.1.0/CodeSystem-v2-0131.html");
+
+		ConceptMap.SourceElementComponent element = group.addElement();
+		element.setCode("CSSS");
+		ConceptMap.TargetElementComponent target = element.addTarget();
+		target.setCode("CSSS");
+		target.setDisplay("Case management (CLSC)");
+		target.setEquivalence(Enumerations.ConceptMapEquivalence.EQUAL);
+
+		Bundle bundle = new Bundle();
+		bundle.setType(BundleType.TRANSACTION);
+		Bundle.BundleEntryRequestComponent request = new Bundle.BundleEntryRequestComponent();
+		request.setUrl("/ConceptMap?url=https://tempuri.org/esl");
+		request.setMethod(HTTPVerb.PUT);
+		bundle.addEntry().setResource(conceptMap).setRequest(request);
+
+		myClient.transaction().withBundle(bundle).execute();
 	}
 
 	@Nonnull
